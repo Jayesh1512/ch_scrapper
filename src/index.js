@@ -10,7 +10,7 @@ puppeteer.use(StealthPlugin());
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const username = "im.osterx.in";
+const username = "imposterx.com.in";
 const password = "imposter@15#12";
 const cookiesFilePath = "./instagram_cookies.json";
 
@@ -54,9 +54,19 @@ const scrapeInstagram = async (profileUrl) => {
   await page.goto(profileUrl, { waitUntil: "networkidle2" });
   await page.waitForSelector("body");
 
-  // Hover over the profile image (._aagu) to trigger any popups
-  await page.waitForSelector("._aagu");
-  await page.hover("._aagu");
+  // Wait for the profile image (._aagu) with a maximum wait time of 3 seconds
+  const profileImageExists = await page.waitForSelector("._aagu", {
+    visible: true,
+    timeout: 3000, // Maximum wait time of 3 seconds
+  }).catch(() => null);
+
+  // If profile image is not found (i.e., the account is private), skip this part
+  if (!profileImageExists) {
+    console.log("This account is private or the profile image is unavailable.");
+  } else {
+    // Hover over the profile image (._aagu) to trigger any popups
+    await page.hover("._aagu");
+  }
 
   // Extract page content
   const htmlContent = await page.content();
@@ -64,13 +74,12 @@ const scrapeInstagram = async (profileUrl) => {
   const $ = cheerio.load(htmlContent);
   const likesArray = [];
   $("li.x972fbf").each((index, element) => {
-    const text = $(element).text().trim(); 
-    likesArray.push(text); 
+    const text = $(element).text().trim();
+    likesArray.push(text);
   });
-  
+
   const likes = likesArray[0];
   const comments = likesArray[1];
-  
 
   const stats = $("header").find("span.x5n08af");
 
@@ -79,17 +88,18 @@ const scrapeInstagram = async (profileUrl) => {
     const followers = $(stats[1]).text();
     const following = $(stats[2]).text();
     console.log({ posts, followers, following });
-  await browser.close();
-  return { posts, followers, following , likes , comments};
-}};
+    await browser.close();
+    return { posts, followers, following, likes, comments };
+  }
+};
 
 // ROUTE : /api
 app.get("/api", (req,res)=> {
   return res.status(200).json({
     success: true,
-    message: "Hi!, welcome to pupetter"
-  })
-})
+    message: "Hi!, welcome to puppeteer"
+  });
+});
 
 // POST endpoint to scrape Instagram profile
 app.post("/scrape", async (req, res) => {
