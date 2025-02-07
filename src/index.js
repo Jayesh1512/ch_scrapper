@@ -4,12 +4,12 @@ import puppeteer from "puppeteer-extra";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
 import * as cheerio from "cheerio";
 import fs from "fs";
-import { log } from "console";
+import { log, profile } from "console";
 
 puppeteer.use(StealthPlugin());
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 6000;
 const username = "imposterx.com.in";
 const password = "imposter@15#12";
 const cookiesFilePath = "./instagram_cookies.json";
@@ -92,6 +92,20 @@ const scrapeInstagram = async (profileUrl) => {
   // Select the profile picture element
   const profilePicElement = $("img[alt*='profile picture']").attr("src");
   console.log(profilePicElement);
+
+
+  const username = profileUrl.split("instagram.com/")[1].split("/")[0];
+
+// Count numeric characters in username
+const numericCount = (username.match(/\d/g) || []).length;
+
+// Calculate nplu (numeric character count / username length)
+const nplu = numericCount / username.length;
+
+console.log("Username:", username);
+console.log("NPLU:", nplu);
+
+
 
   // Default Instagram anonymous profile picture URL
   const defaultProfilePic = `
