@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instagram Scraper Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 50px;
+        }
+        input, button {
+            padding: 10px;
+            margin: 10px;
+            font-size: 16px;
+        }
+        #result {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Instagram Profile Scraper</h1>
+    <p>Enter an Instagram profile URL to get followers & following count.</p>
+
+    <input type="text" id="profileUrl" placeholder="Enter Instagram Profile URL" size="40">
+    <button onclick="scrapeProfile()">Scrape Data</button>
+
+    <div id="result"></div>
+
+    <script>
+        async function scrapeProfile() {
+            const profileUrl = document.getElementById("profileUrl").value.trim();
+            if (!profileUrl) {
+                alert("Please enter a valid Instagram profile URL!");
+                return;
+            }
+
+            document.getElementById("result").innerText = "Fetching data...";
+
+            try {
+                const response = await fetch("http://127.0.0.1:3001/scrape", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ profile: profileUrl })
+                });
+
+                const data = await response.json();
+                if (data.error) {
+                    document.getElementById("result").innerText = "Error: " + data.error;
+                } else {
+                    document.getElementById("result").innerHTML = 
+                        `👥 Followers: ${data.followers} <br> 🚀 Following: ${data.following}`;
+                }
+            } catch (error) {
+                document.getElementById("result").innerText = "Failed to fetch data.";
+            }
+        }
+    </script>
+
+</body>
+</html>
