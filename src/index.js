@@ -83,6 +83,14 @@ const scrapeInstagram = async (profileUrl) => {
   return { posts, followers, following , likes , comments};
 }};
 
+// ROUTE : /api
+app.get("/api", (req,res)=> {
+  return res.status(200).json({
+    success: true,
+    message: "Hi!, welcome to pupetter"
+  })
+})
+
 // POST endpoint to scrape Instagram profile
 app.post("/scrape", async (req, res) => {
   const { profile } = req.body; // Accept profile URL from request body
