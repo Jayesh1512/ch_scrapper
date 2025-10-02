@@ -15,12 +15,12 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@sparticuz/chromium": "^126.0.0",
+    "@sparticuz/chromium": "^119.0.0",
     "cheerio": "^1.0.0-rc.12",
     "cors": "^2.8.5",
     "express": "^4.21.2",
     "puppeteer": "^24.2.0",
-    "puppeteer-core": "^23.0.0"
+    "puppeteer-core": "^21.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.9"
