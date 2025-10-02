@@ -1,0 +1,24 @@
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::6000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at app.listen (/Users/jayeshshete/Documents/Project/cyberhack/ch_scrapper/node_modules/express/lib/application.js:635:24)
+    at file:///Users/jayeshshete/Documents/Project/cyberhack/ch_scrapper/src/index.js:196:5
+    at ModuleJob.run (node:internal/modules/esm/module_job:370:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 6000
+}
+
+Node.js v24.4.1

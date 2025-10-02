@@ -1,8 +1,16 @@
 {
   "version": 2,
+  "functions": {
+    "api/scrape.js": {
+      "maxDuration": 30
+    },
+    "api/index.js": {
+      "maxDuration": 10
+    }
+  },
   "builds": [
     {
-      "src": "src/index.js",
+      "src": "api/**/*.js",
       "use": "@vercel/node"
     },
     {
@@ -16,12 +24,16 @@
       "dest": "index.html"
     },
     {
-      "src": "/scrape",
-      "dest": "src/index.js"
+      "src": "/api/scrape",
+      "dest": "api/scrape.js"
     },
     {
       "src": "/api",
-      "dest": "src/index.js"
+      "dest": "api/index.js"
+    },
+    {
+      "src": "/scrape",
+      "dest": "api/scrape.js"
     }
   ]
 }

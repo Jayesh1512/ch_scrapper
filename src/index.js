@@ -1,12 +1,15 @@
 import express from "express";
 import cors from "cors";
-import puppeteer from "puppeteer-extra";
-import StealthPlugin from "puppeteer-extra-plugin-stealth";
 import * as cheerio from "cheerio";
 import fs from "fs";
 import { log, profile } from "console";
 
-puppeteer.use(StealthPlugin());
+// Dynamic imports for browser dependencies
+let puppeteer;
+let chromium;
+
+// Determine if we're in local development or production
+const isLocal = process.env.NODE_ENV !== 'production';
 
 const app = express();
 const PORT = process.env.PORT || 6000;
@@ -19,18 +22,49 @@ app.use(cors());
 app.use(express.json());
 
 const scrapeInstagram = async (profileUrl) => {
-  const browser = await puppeteer.launch({ headless: false });
+  // Initialize browser dependencies based on environment
+  if (isLocal) {
+    // Use regular puppeteer for local development
+    if (!puppeteer) {
+      const puppeteerModule = await import('puppeteer');
+      puppeteer = puppeteerModule.default;
+    }
+  } else {
+    // Use puppeteer-core + chromium for production/Vercel
+    if (!puppeteer) {
+      const puppeteerModule = await import('puppeteer-core');
+      puppeteer = puppeteerModule.default;
+    }
+    if (!chromium) {
+      const chromiumModule = await import('@sparticuz/chromium');
+      chromium = chromiumModule.default;
+    }
+  }
+  
+  // Configure browser based on environment
+  const browserConfig = isLocal 
+    ? { headless: true }
+    : {
+        args: chromium.args,
+        defaultViewport: chromium.defaultViewport,
+        executablePath: await chromium.executablePath(),
+        headless: chromium.headless,
+        ignoreHTTPSErrors: true,
+      };
+  
+  const browser = await puppeteer.launch(browserConfig);
+  
   const page = await browser.newPage();
-
-  await page.setUserAgent(
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-  );
   await page.setViewport({ width: 1280, height: 800 });
 
-  // Load cookies if available
-  if (fs.existsSync(cookiesFilePath)) {
-    const cookies = JSON.parse(fs.readFileSync(cookiesFilePath, "utf8"));
-    await page.setCookie(...cookies);
+  // Load cookies if available (skip in serverless environment)
+  try {
+    if (fs.existsSync && fs.existsSync(cookiesFilePath)) {
+      const cookies = JSON.parse(fs.readFileSync(cookiesFilePath, "utf8"));
+      await page.setCookie(...cookies);
+    }
+  } catch (error) {
+    console.log("Cookie loading skipped in serverless environment");
   }
 
   await page.goto("https://www.instagram.com/accounts/login/", {
@@ -45,35 +79,44 @@ const scrapeInstagram = async (profileUrl) => {
     await page.click('button[type="submit"]');
     await page.waitForNavigation({ waitUntil: "networkidle2" });
 
-    // Save cookies for future sessions
-    const cookies = await page.cookies();
-    fs.writeFileSync(cookiesFilePath, JSON.stringify(cookies, null, 2));
+    // Save cookies for future sessions (skip in serverless environment)
+    try {
+      if (fs.writeFileSync) {
+        const cookies = await page.cookies();
+        fs.writeFileSync(cookiesFilePath, JSON.stringify(cookies, null, 2));
+      }
+    } catch (error) {
+      console.log("Cookie saving skipped in serverless environment");
+    }
   }
   let hasProfilePicture = false;
+  let privateAcc = false;
+  
   // Navigate to the Instagram profile
   await page.goto(profileUrl, { waitUntil: "networkidle2" });
   await page.waitForSelector("body");
 
-  // Wait for the profile image (._aagu) with a maximum wait time of 3 seconds
-  const profileImageExists = await page
-    .waitForSelector("._aagu", {
-      visible: true,
-      timeout: 3000, // Maximum wait time of 3 seconds
-    })
-    .catch(() => null);
-  let privateAcc = false;
-  // If profile image is not found (i.e., the account is private), skip this part
-  if (!profileImageExists) {
-    console.log("Account is private");
-    privateAcc = true;
-  } else {
+  // Check if account is private by looking for private account indicators
+  try {
+    await page.waitForSelector("._aagu", { visible: true, timeout: 3000 });
     privateAcc = false;
-    await page.hover("._aagu");
+  } catch (error) {
+    console.log("Account is private or profile image not found");
+    privateAcc = true;
   }
 
   // Extract page content
   const htmlContent = await page.content();
-  fs.writeFileSync("instagram.html", htmlContent);
+  
+  // Save HTML content (skip in serverless environment)
+  try {
+    if (fs.writeFileSync) {
+      fs.writeFileSync("instagram.html", htmlContent);
+    }
+  } catch (error) {
+    console.log("HTML saving skipped in serverless environment");
+  }
+  
   const $ = cheerio.load(htmlContent);
   const likesArray = [];
   $("li.x972fbf").each((index, element) => {
@@ -93,30 +136,19 @@ const scrapeInstagram = async (profileUrl) => {
   const profilePicElement = $("img[alt*='profile picture']").attr("src");
   console.log(profilePicElement);
 
-
   const username = profileUrl.split("instagram.com/")[1].split("/")[0];
 
-// Count numeric characters in username
-const numericCount = (username.match(/\d/g) || []).length;
+  // Count numeric characters in username
+  const numericCount = (username.match(/\d/g) || []).length;
 
-// Calculate nplu (numeric character count / username length)
-const nplu = numericCount / username.length;
+  // Calculate nplu (numeric character count / username length)
+  const nplu = numericCount / username.length;
 
-console.log("Username:", username);
-console.log("NPLU:", nplu);
+  console.log("Username:", username);
+  console.log("NPLU:", nplu);
 
-
-
-  // Default Instagram anonymous profile picture URL
-  const defaultProfilePic = `
-https://scontent-cdg4-1.cdninstagram.com/v/t51.2885-19/464760996_1254146839119862_3605321457742435801_n.png?stp=dst-jpg_e0_s150x150_tt6&cb=8577c754-c2464923&_nc_ht=scontent-cdg4-1.cdninstagram.com&_nc_cat=1&_nc_oc=Q6cZ2AHyzCz25muen3Umhz5qSGPZVOk9ZTz3pXCrlMMwBhzwPdIsy3Uj_SKUfeiCNR9dC2lIgp2Bodgg3fLu6L01ORhO&_nc_ohc=pwFMIf_qBR0Q7kNvgG1JRq2&_nc_gid=d0d755d3a4764468bed174efeb7cd435&edm=AD93TDoBAAAA&ccb=7-5&ig_cache_key=YW5vbnltb3VzX3Byb2ZpbGVfcGlj.3-ccb7-5-cb8577c754-c2464923&oh=00_AYAfuPr8Zq6PnU4knnfq45QHrOY1g6MUbdgoAMArmFTUPw&oe=67AC0FE8&_nc_sid=87e5dd`;
-
-  // Determine if the user has a profile picture
-  if (profilePicElement.includes('https://scontent')) {
-    hasProfilePicture = false;
-  } else {
-    hasProfilePicture = true;
-  }
+  // Determine if the user has a profile picture (simplified check)
+  hasProfilePicture = profilePicElement && profilePicElement.includes('scontent');
 
   if (stats.length >= 3) {
     const posts = $(stats[0]).text();
