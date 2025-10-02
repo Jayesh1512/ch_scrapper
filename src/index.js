@@ -9,7 +9,8 @@ let puppeteer;
 let chromium;
 
 // Determine if we're in local development or production
-const isLocal = process.env.NODE_ENV !== 'production';
+// Check for Vercel environment variables
+const isLocal = !process.env.VERCEL && !process.env.VERCEL_ENV && process.env.NODE_ENV !== 'production';
 
 const app = express();
 const PORT = process.env.PORT || 6000;
